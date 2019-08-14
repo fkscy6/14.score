@@ -25,7 +25,7 @@ getList(nowPage);
 // 리스트 가져오기 
 // get / https://webmir.co.kr/score/score_li.php / page
 function getList(page) {
-	nowPage = page; //지역변수 page의 값을 전역변수 nowPage에 넣어준다.
+	nowPage = page;		//지역변수 page의 값을 전역변수 nowPage에 넣어준다.
 	$.ajax({
 		type: "get",
 		url: scoreURL.rURL,
@@ -43,14 +43,15 @@ function getList(page) {
 				html += '<td>' + res.student[i].eng + '점</td>';
 				html += '<td>' + res.student[i].math + '점</td>';
 				html += '<td class="text-center">';
-				html += '<button class="btn btn-success bt-up data-id="' + res.student[i].id + '">수정</button>';
-				html += '<button class="btn btn-danger bt-del data-id="' + res.student[i].id + '">삭제</button>';
+				html += '<button class="btn btn-success" onclick="upData(this, '+res.student[i].id+');">수정</button> ';
+				html += '<button class="btn btn-danger" onclick="delData(this, '+res.student[i].id+');">삭제</button>';
+				html += '<button class="btn btn-primary d-none" onclick="dataSave(this, '+res.student[i].id+');">저장</button> ';
+				html += '<button class="btn btn-info d-none" onclick="upCancel(this, '+res.student[i].id+');">취소</button>';
 				html += '</td>';
 				html += '</tr>';
 				$(".score-tb").find("tbody").append(html);
 			}
 			pagerMaker(res.total, page);
-			deleteMaker();
 		},
 		error: function (xhr) {
 			alert("통신이 실패했습니다. 관리자에게 문의하세요.");
@@ -58,6 +59,151 @@ function getList(page) {
 		}
 	});
 }
+
+// 리스트 수정하기
+function upData(bt, id) {
+	// console.log(bt, $(bt), id);
+	var $bt = $(bt);
+	var $td = $bt.parent();
+	var $tr = $td.parent();
+	for(var i=0, txt='', type='text'; i<4; i++) {
+		txt = $tr.children("td").eq(i).text();
+		if(i>0) {
+			txt = txt.replace("점", "");
+			type = "number";
+		}
+		html = '<input type="'+type+'" class="form-control" value="'+txt+'">';
+		$tr.children("td").eq(i).html(html);
+	}
+	$td.children(".btn").toggleClass("d-none");
+}
+
+function upCancel(bt, id) {
+	var $bt = $(bt);
+	var $td = $bt.parent();
+	var $tr = $td.parent();
+	for(var i=0, txt=''; i<4; i++) {
+		txt = $tr.find("input").eq(i).val();
+		if(i>0) txt += "점";
+		$tr.children("td").eq(i).html(txt);
+	}
+	$td.children(".btn").toggleClass("d-none");
+}
+
+
+// 리스트 저장하기
+function dataSave(bt, id){
+	var url = scoreURL.cURL;
+	var option;
+	var $tr = $(bt).parent().parent();
+	var $input = $tr.find("input");
+	var comment = [];
+	comment[0] = "학생이름을";
+	comment[1] = "올바른 국어 점수를";
+	comment[2] = "올바른 영어 점수를";
+	comment[3] = "올바른 수학 점수를";
+	for(var i=0; i<4; i++) {
+		if(i == 0) {
+			if($input.eq(i).val() == "") {
+				alert(comment[i] + " 입력해 주세요.");
+				$input.eq(i).focus();
+				return;
+			}
+		}
+		else {
+			if($.trim($input.eq(i).val()) == "" || Number($input.eq(i).val()) < 0 || Number($input.eq(i).val()) > 100) {
+				alert(comment[i] + " 입력하세요.");
+				$input.eq(i).focus();
+				return;
+			}
+		}
+	}
+
+	option = {
+		stdname: $.trim($input.eq(0).val()),
+		kor: $input.eq(1).val(),
+		eng: $input.eq(2).val(),
+		math: $input.eq(3).val()
+	};
+	
+	if(id > 0) {
+		url = scoreURL.uURL;
+		option.id = id;
+	}
+
+	$.ajax({
+		type: "post",
+		url: url,
+		data: option,
+		dataType: "json",
+		success: function (res) {
+			if (res.code == 200) getList(nowPage);
+			else alert("데이터 처리가 실패했습니다. 관리자에게 문의하세요.");
+		}
+	});
+
+	/*
+	var stdname = $.trim($("#stdname").val());
+	var kor = Number($("#kor").val());
+	var eng = Number($("#eng").val());
+	var math = Number($("#math").val());
+	if(kor == 0) kor = "0";
+	if(eng == 0) eng = "0";
+	if(math == 0) math = "0";
+	if(stdname == "") {
+		alert("학생 이름을 입력해 주세요.");
+		$("#stdname").focus();
+		return;
+	}
+	if(kor == "" || kor<0 || kor>100) {
+		alert("올바른 국어점수를 입력하세요.");
+		$("#kor").focus();
+		return;
+	}
+	if(eng == "" || eng<0 || eng>100) {
+		alert("올바른 영어점수를 입력하세요.");
+		$("#eng").focus();
+		return;
+	}
+	if(math == "" || math<0 || math>100) {
+		alert("올바른 수학점수를 입력하세요.");
+		$("#math").focus();
+		return;
+	}
+	$.ajax({
+		type: "post",
+		url: scoreURL.cURL,
+		data: {
+			stdname: stdname,
+			kor: kor,
+			eng: eng,
+			math: math
+		},
+		dataType: "json",
+		success: function (res) {
+			if (res.code == 200) getList(nowPage);
+			else alert("데이터 처리가 실패했습니다. 관리자에게 문의하세요.");
+		}
+	});
+	*/
+}
+
+// 리스트 삭제하기 
+function delData(bt, id) {
+	if(confirm("정말로 삭제하시겠습니까?")) {
+		$.ajax({
+			type: "post",
+			url: scoreURL.dURL,
+			data: {id: id},
+			dataType: "json",
+			success: function (res) {
+				if (res.code == 200) getList(nowPage);
+				else alert("데이터 처리가 실패했습니다. 관리자에게 문의하세요.");
+			}
+		});
+	}
+}
+
 
 // 페이저 생성
 function pagerMaker(total, page) {
@@ -115,18 +261,18 @@ function pagerMaker(total, page) {
 }
 console.log(!false);
 
-// 리스트 삭제하기 
+
+
+
+/*
 function deleteMaker() {
 	// post / https://webmir.co.kr/score/score_del.php / id
 	$(".bt-del").click(function () {
-		// var id = $(this).data("id");
-		if (confirm("정말로 삭제하시겠습니까?")) {
+		if(confirm("정말로 삭제하시겠습니까?")) {
 			$.ajax({
 				type: "post",
 				url: scoreURL.dURL,
-				data: {
-					id: $(this).data("id")
-				},
+				data: {id: $(this).data("id")},
 				dataType: "json",
 				success: function (res) {
 					if (res.code == 200) getList(nowPage);
@@ -136,49 +282,8 @@ function deleteMaker() {
 		}
 	});
 }
+*/
 
-// 데이터 저장
-$("#btSave").click(function () {
-	var stdname = $.trim($("#stdname").val());
-	var kor = Number($("#kor").val());
-	var eng = Number($("#eng").val());
-	var math = Number($("#math").val());
-	if(kor == 0) kor ="0";
-	if(eng == 0) eng ="0";
-	if(math == 0) math ="0";
-	if (stdname == "") {
-		alert("학생 이름을 입력해 주세요.");
-		$("#stdname").focus();
-		return;
-	}
-	if (kor == "" || kor < 0 || kor > 100) {
-		alert("올바른 국어점수를 입력하세요.");
-		$("#kor").focus();
-		return;
-	}
-	if (eng == "" || eng < 0 || eng > 100) {
-		alert("올바른 영어점수를 입력하세요.");
-		$("#eng").focus();
-		return;
-	}
-	if (math == "" || math < 0 || math > 100) {
-		alert("올바른 수학점수를 입력하세요.");
-		$("#math").focus();
-		return;
-	}
-	$.ajax({
-		type: "post",
-		url: scoreURL.cURL,
-		data: {
-			stdname: stdname,
-			kor: kor,
-			eng: eng,
-			math: math
-		},
-		dataType: "json",
-		success: function (res) {
-			if (res.code == 200) getList(nowPage);
-			else alert("데이터 처리가 실패했습니다. 관리자에게 문의하세요.");
-		}
-	});
-});
+
+
+
